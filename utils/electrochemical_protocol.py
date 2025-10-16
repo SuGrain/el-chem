@@ -65,7 +65,8 @@ class ElectrochemicalProtocol:
                 bytesize=8,
                 parity='N',
                 stopbits=1,
-                timeout=1
+                timeout=5,  # 增加读超时到5秒,避免长时间等待时断连
+                write_timeout=2  # 添加写超时,防止写阻塞
             )
             print(f"已连接到设备: {self.port} @ {self.baudrate}")
             
@@ -156,6 +157,9 @@ class ElectrochemicalProtocol:
     
     def _read_serial_data(self):
         """串口数据读取线程"""
+        consecutive_errors = 0
+        max_consecutive_errors = 3
+        
         while not self.stop_flag.is_set():
             try:
                 if self.serial_conn and self.serial_conn.is_open:
@@ -163,10 +167,34 @@ class ElectrochemicalProtocol:
                     if line:
                         response = line.decode().strip()
                         self.response_queue.put(response)
+                        consecutive_errors = 0  # 成功读取后重置错误计数
+                    # 即使没有数据也不算错误,可能只是设备暂时没发送
+                else:
+                    print("串口未打开或已断开")
+                    break
+                    
                 time.sleep(0.001)  # 避免CPU占用过高
+                
+            except serial.SerialException as e:
+                consecutive_errors += 1
+                print(f"串口异常 ({consecutive_errors}/{max_consecutive_errors}): {e}")
+                if consecutive_errors >= max_consecutive_errors:
+                    print("连续串口错误过多,停止读取")
+                    break
+                time.sleep(0.5)  # 串口错误后等待一段时间
+                
+            except UnicodeDecodeError as e:
+                # 解码错误不致命,跳过这条数据
+                print(f"数据解码错误: {e}")
+                consecutive_errors = 0
+                
             except Exception as e:
-                print(f"读取串口数据错误: {e}")
-                break
+                consecutive_errors += 1
+                print(f"读取串口数据错误 ({consecutive_errors}/{max_consecutive_errors}): {e}")
+                if consecutive_errors >= max_consecutive_errors:
+                    print("连续错误过多,停止读取")
+                    break
+                time.sleep(0.5)
     
     def _start_simulation(self):
         """启动模拟数据生成"""
