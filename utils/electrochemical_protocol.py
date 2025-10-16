@@ -1,3 +1,5 @@
+"""电化学设备通信协议实现模块"""
+
 import serial
 import time
 import csv
@@ -6,10 +8,10 @@ import queue
 import matplotlib.pyplot as plt
 from datetime import datetime
 from enum import Enum
-import argparse
-import sys
+
 
 class ProtocolState(Enum):
+    """协议状态枚举"""
     IDLE = 0
     PARAMETER_SET = 1
     WAITING_ACK = 2
@@ -18,10 +20,19 @@ class ProtocolState(Enum):
     TEST_COMPLETE = 5
     ERROR = 6
 
+
 class ElectrochemicalProtocol:
     """电化学设备通信协议实现"""
     
     def __init__(self, port=None, baudrate=115200, simulate=False):
+        """
+        初始化电化学协议实例
+        
+        Args:
+            port: 串口号 (如: COM3 或 /dev/ttyUSB0)
+            baudrate: 波特率 (默认: 115200)
+            simulate: 是否使用模拟模式 (默认: False)
+        """
         self.port = port
         self.baudrate = baudrate
         self.simulate = simulate
@@ -252,7 +263,15 @@ class ElectrochemicalProtocol:
             print(f"未知响应: {response}")
     
     def save_data(self, filename=None):
-        """保存测试数据"""
+        """
+        保存测试数据到CSV文件
+        
+        Args:
+            filename: 保存文件名 (默认: cv_data_YYYYMMDD_HHMMSS.csv)
+            
+        Returns:
+            保存的文件名或None (如果失败)
+        """
         if not self.data_buffer:
             print("❌ 没有数据可保存")
             return None
@@ -277,7 +296,12 @@ class ElectrochemicalProtocol:
             return None
     
     def plot_data(self, save_plot=True):
-        """绘制CV曲线"""
+        """
+        绘制CV曲线
+        
+        Args:
+            save_plot: 是否保存图形到文件 (默认: True)
+        """
         if not self.data_buffer:
             print("❌ 没有数据可绘制")
             return
@@ -314,9 +338,26 @@ class ElectrochemicalProtocol:
         except Exception as e:
             print(f"❌ 绘图失败: {e}")
 
+
 def run_cv_test(port=None, simulate=False, start_v=-1.0, end_v=1.0, 
-                scan_rate=0.2, cycles=2, current_range=50):
-    """运行完整的CV测试"""
+                scan_rate=0.2, cycles=2, current_range=50, save_data=True, save_plot=True):
+    """
+    运行完整的CV测试
+    
+    Args:
+        port: 串口号
+        simulate: 是否使用模拟模式
+        start_v: 起始电位 (V)
+        end_v: 结束电位 (V)
+        scan_rate: 扫描速率 (V/s)
+        cycles: 循环次数
+        current_range: 电流量程 (μA)
+        save_data: 是否保存数据到 CSV (默认: True)
+        save_plot: 是否保存图形到文件 (默认: True)
+        
+    Returns:
+        测试是否成功 (True/False)
+    """
     
     print("🔬 电化学设备通信协议测试")
     print("=" * 50)
@@ -369,12 +410,17 @@ def run_cv_test(port=None, simulate=False, start_v=-1.0, end_v=1.0,
             return False
         
         # 6. 保存和显示结果
-        print(f"\n💾 步骤6: 保存结果...")
-        filename = protocol.save_data()
-        
-        if filename:
-            print(f"\n📈 步骤7: 绘制曲线...")
-            protocol.plot_data()
+        if save_data:
+            print(f"\n💾 步骤6: 保存结果...")
+            filename = protocol.save_data()
+            
+            if filename and save_plot:
+                print(f"\n📈 步骤7: 绘制曲线...")
+                protocol.plot_data(save_plot=True)
+        else:
+            if save_plot:
+                print(f"\n📈 步骤6: 绘制曲线...")
+                protocol.plot_data(save_plot=False)
         
         print("\n✅ 测试完成!")
         return True
@@ -385,44 +431,3 @@ def run_cv_test(port=None, simulate=False, start_v=-1.0, end_v=1.0,
         
     finally:
         protocol.disconnect()
-
-def main():
-    """主函数"""
-    parser = argparse.ArgumentParser(description='电化学设备通信协议测试程序')
-    parser.add_argument('-p', '--port', help='串口号 (如: COM3 或 /dev/ttyUSB0)')
-    parser.add_argument('-b', '--baudrate', type=int, default=115200, help='波特率 (默认: 115200)')
-    parser.add_argument('-s', '--simulate', action='store_true', help='使用模拟模式')
-    parser.add_argument('--start-v', type=float, default=-1.0, help='起始电位 (V)')
-    parser.add_argument('--end-v', type=float, default=1.0, help='结束电位 (V)')
-    parser.add_argument('--scan-rate', type=float, default=0.2, help='扫描速率 (V/s)')
-    parser.add_argument('--cycles', type=int, default=1, help='循环次数')
-    parser.add_argument('--current-range', type=int, default=100, help='电流量程 (μA)')
-    
-    args = parser.parse_args()
-    
-    # 参数验证
-    if not args.simulate and not args.port:
-        print("❌ 错误: 请指定串口 (-p) 或使用模拟模式 (-s)")
-        print("示例:")
-        print("  python cv_protocol.py -s                    # 模拟模式")
-        print("  python cv_protocol.py -p COM3               # Windows串口")
-        print("  python cv_protocol.py -p /dev/ttyUSB0       # Linux串口")
-        return
-    
-    # 运行测试
-    success = run_cv_test(
-        port=args.port,
-        simulate=args.simulate,
-        start_v=args.start_v,
-        end_v=args.end_v,
-        scan_rate=args.scan_rate,
-        cycles=args.cycles,
-        current_range=args.current_range
-    )
-    
-    if not success:
-        print("❌ 测试失败")
-        sys.exit(1)
-
-if __name__ == "__main__":
-    main()
