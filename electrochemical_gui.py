@@ -68,13 +68,13 @@ class DetectionWorker(QThread):
                 self.protocol = ElectrochemicalProtocol(
                     port=self.params.get('port'),
                     baudrate=self.params.get('baudrate', 115200),
-                    simulate=self.params.get('simulate', True)
+                    simulate=False
                 )
             else:  # DPV
                 self.protocol = DPVProtocol(
                     port=self.params.get('port'),
                     baudrate=self.params.get('baudrate', 115200),
-                    simulate=self.params.get('simulate', True)
+                    simulate=False
                 )
             
             # 连接设备
@@ -184,8 +184,8 @@ class DetectionWorker(QThread):
                         self.progress_update.emit(progress, f"已采集 {len(self.protocol.data_buffer)} 个数据点...")
                         last_update_time = current_time
                 
-                # 检查串口连接状态(仅非模拟模式)
-                if not self.protocol.simulate and self.protocol.serial_conn:
+                # 检查串口连接状态
+                if self.protocol.serial_conn:
                     if not self.protocol.serial_conn.is_open:
                         self.finished.emit(False, "串口连接已断开,请检查设备连接")
                         return
@@ -321,8 +321,8 @@ class ElectrochemicalGUI(QMainWindow):
         right_panel = self.create_display_panel()
         splitter.addWidget(right_panel)
         
-        # 设置分割比例
-        splitter.setSizes([400, 1000])
+        # 设置分割比例 (增大左侧面板宽度)
+        splitter.setSizes([600, 1000])
         
         main_layout.addWidget(splitter)
         
@@ -366,15 +366,10 @@ class ElectrochemicalGUI(QMainWindow):
         conn_group = QGroupBox("连接设置")
         conn_layout = QFormLayout()
         
-        self.simulate_combo = QComboBox()
-        self.simulate_combo.addItems(['模拟模式', '真实设备'])
-        self.simulate_combo.currentIndexChanged.connect(self.on_mode_changed)
-        conn_layout.addRow("运行模式:", self.simulate_combo)
-        
         # 串口选择
         port_layout = QHBoxLayout()
         self.port_combo = QComboBox()
-        self.port_combo.setMinimumWidth(150)
+        self.port_combo.setMinimumWidth(200)
         port_layout.addWidget(self.port_combo)
         
         refresh_btn = QPushButton("刷新")
@@ -427,6 +422,7 @@ class ElectrochemicalGUI(QMainWindow):
         self.cv_start_v.setValue(-1.0)
         self.cv_start_v.setSingleStep(0.1)
         self.cv_start_v.setSuffix(" V")
+        self.cv_start_v.setMinimumWidth(180)
         layout.addRow("起始电位:", self.cv_start_v)
         
         self.cv_end_v = QDoubleSpinBox()
@@ -434,6 +430,7 @@ class ElectrochemicalGUI(QMainWindow):
         self.cv_end_v.setValue(1.0)
         self.cv_end_v.setSingleStep(0.1)
         self.cv_end_v.setSuffix(" V")
+        self.cv_end_v.setMinimumWidth(180)
         layout.addRow("结束电位:", self.cv_end_v)
         
         self.cv_scan_rate = QDoubleSpinBox()
@@ -441,21 +438,25 @@ class ElectrochemicalGUI(QMainWindow):
         self.cv_scan_rate.setValue(0.2)
         self.cv_scan_rate.setSingleStep(0.05)
         self.cv_scan_rate.setSuffix(" V/s")
+        self.cv_scan_rate.setMinimumWidth(180)
         layout.addRow("扫描速率:", self.cv_scan_rate)
         
         self.cv_cycles = QSpinBox()
         self.cv_cycles.setRange(1, 10)
         self.cv_cycles.setValue(2)
+        self.cv_cycles.setMinimumWidth(180)
         layout.addRow("循环次数:", self.cv_cycles)
         
         self.cv_scan_dir = QComboBox()
         self.cv_scan_dir.addItems(['正向 (1)', '负向 (-1)'])
+        self.cv_scan_dir.setMinimumWidth(180)
         layout.addRow("扫描方向:", self.cv_scan_dir)
         
         self.cv_current_range = QSpinBox()
         self.cv_current_range.setRange(1, 1000)
         self.cv_current_range.setValue(50)
         self.cv_current_range.setSuffix(" μA")
+        self.cv_current_range.setMinimumWidth(180)
         layout.addRow("电流量程:", self.cv_current_range)
         
         return widget
@@ -470,6 +471,7 @@ class ElectrochemicalGUI(QMainWindow):
         self.dpv_start_v.setValue(-1.0)
         self.dpv_start_v.setSingleStep(0.1)
         self.dpv_start_v.setSuffix(" V")
+        self.dpv_start_v.setMinimumWidth(180)
         layout.addRow("起始电位:", self.dpv_start_v)
         
         self.dpv_end_v = QDoubleSpinBox()
@@ -477,6 +479,7 @@ class ElectrochemicalGUI(QMainWindow):
         self.dpv_end_v.setValue(1.0)
         self.dpv_end_v.setSingleStep(0.1)
         self.dpv_end_v.setSuffix(" V")
+        self.dpv_end_v.setMinimumWidth(180)
         layout.addRow("结束电位:", self.dpv_end_v)
         
         self.dpv_pulse_height = QDoubleSpinBox()
@@ -484,24 +487,28 @@ class ElectrochemicalGUI(QMainWindow):
         self.dpv_pulse_height.setValue(0.1)
         self.dpv_pulse_height.setSingleStep(0.01)
         self.dpv_pulse_height.setSuffix(" V")
+        self.dpv_pulse_height.setMinimumWidth(180)
         layout.addRow("脉冲幅度:", self.dpv_pulse_height)
         
         self.dpv_pulse_width = QSpinBox()
         self.dpv_pulse_width.setRange(1, 100)
         self.dpv_pulse_width.setValue(10)
         self.dpv_pulse_width.setSuffix(" ms")
+        self.dpv_pulse_width.setMinimumWidth(180)
         layout.addRow("脉冲宽度:", self.dpv_pulse_width)
         
         self.dpv_pulse_period = QSpinBox()
         self.dpv_pulse_period.setRange(1, 200)
         self.dpv_pulse_period.setValue(10)
         self.dpv_pulse_period.setSuffix(" ms")
+        self.dpv_pulse_period.setMinimumWidth(180)
         layout.addRow("脉冲周期:", self.dpv_pulse_period)
         
         self.dpv_sample_width = QSpinBox()
         self.dpv_sample_width.setRange(1, 100)
         self.dpv_sample_width.setValue(20)
         self.dpv_sample_width.setSuffix(" ms")
+        self.dpv_sample_width.setMinimumWidth(180)
         layout.addRow("采样窗口:", self.dpv_sample_width)
         
         self.dpv_cycles = QSpinBox()
@@ -572,11 +579,6 @@ class ElectrochemicalGUI(QMainWindow):
         """检测方法改变时切换参数标签页"""
         self.param_tabs.setCurrentIndex(index)
     
-    def on_mode_changed(self, index):
-        """运行模式改变时启用/禁用串口选择"""
-        is_real_device = (index == 1)
-        self.port_combo.setEnabled(is_real_device)
-    
     def initial_refresh_ports(self):
         """初始化时刷新串口列表(不记录日志)"""
         self.port_combo.clear()
@@ -595,9 +597,6 @@ class ElectrochemicalGUI(QMainWindow):
             self.port_combo.addItem("需要安装 pyserial", None)
         except Exception as e:
             self.port_combo.addItem("获取串口失败", None)
-        
-        # 初始状态下禁用串口选择(模拟模式)
-        self.port_combo.setEnabled(self.simulate_combo.currentIndex() == 1)
     
     def refresh_ports(self):
         """刷新可用串口列表"""
@@ -622,9 +621,6 @@ class ElectrochemicalGUI(QMainWindow):
         except Exception as e:
             self.port_combo.addItem("获取串口失败", None)
             self.log_message(f"获取串口列表失败: {str(e)}")
-        
-        # 更新串口选择状态
-        self.port_combo.setEnabled(self.simulate_combo.currentIndex() == 1)
     
     def log_message(self, message):
         """添加日志消息"""
@@ -637,21 +633,15 @@ class ElectrochemicalGUI(QMainWindow):
         method = 'CV' if self.method_combo.currentIndex() == 0 else 'DPV'
         
         # 检查串口配置
-        is_simulate = self.simulate_combo.currentIndex() == 0
-        port = None
-        
-        if not is_simulate:
-            # 真实设备模式,需要选择串口
-            if self.port_combo.count() == 0 or self.port_combo.currentData() is None:
-                QMessageBox.warning(self, "错误", "请先选择有效的串口!")
-                return
-            port = self.port_combo.currentData()
-            self.log_message(f"使用串口: {port}")
+        if self.port_combo.count() == 0 or self.port_combo.currentData() is None:
+            QMessageBox.warning(self, "错误", "请先选择有效的串口!")
+            return
+        port = self.port_combo.currentData()
+        self.log_message(f"使用串口: {port}")
         
         # 获取参数
         params = {
             'port': port,
-            'simulate': is_simulate,
             'baudrate': 115200
         }
         
