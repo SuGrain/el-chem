@@ -314,12 +314,3 @@ P <start_v>,<end_v>,<scan_dir>,<pulse_height>,<start_v2>,<cycles>,<vertex_v>,<pa
 | cycles | 1 | 100 | - | 循环次数 |
 | current_range | 1 | 1000 | μA | 电流量程 |
 
-### B. DPV 协议版本历史
-
-| 版本 | 日期 | 说明 |
-|------|------|------|
-| 1.0 | 2025-10-17 | 基于实际 serial_log.hex 分析，初版发布 |
-
----
-
-**文档完成时间：** 2025年10月17日
